@@ -1,0 +1,1 @@
+# Rust-Disaster-Recovery\n\n## Overview\nEnterprise-grade disaster recovery implementation in Rust.\n\n## Quick Start (1-Click Build)\n\n```bash\ngit clone https://github.com/skylerblue333/Rust-Disaster-Recovery.git\ncd Rust-Disaster-Recovery\n# Build instructions depend on the language\n```\n
