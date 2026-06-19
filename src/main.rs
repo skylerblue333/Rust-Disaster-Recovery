@@ -1,43 +1,34 @@
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
+use std::sync::Arc;
 
-#[derive(Serialize, Deserialize, Clone)]
-struct ServiceState {
-    domain: String,
-    processed: usize,
+#[derive(Deserialize)]
+struct InsertRequest {
+    key: String,
+    value: f64,
+    timestamp: u64,
 }
 
-struct AppState {
-    state: Mutex<ServiceState>,
+async fn insert(
+    store: web::Data<Arc<app::Store>>,
+    req: web::Json<InsertRequest>,
+) -> impl Responder {
+    store.insert(&req.key, req.value, req.timestamp);
+    HttpResponse::Ok().json(serde_json::json!({ "status": "inserted", "total": store.count() }))
 }
 
-async fn health(data: web::Data<AppState>) -> impl Responder {
-    let state = data.state.lock().unwrap();
-    HttpResponse::Ok().json(serde_json::json!({"status": "ok", "domain": state.domain, "processed": state.processed}))
-}
-
-async fn process(data: web::Data<AppState>) -> impl Responder {
-    let mut state = data.state.lock().unwrap();
-    state.processed += 1;
-    HttpResponse::Accepted().json(serde_json::json!({"status": "processing"}))
+async fn health() -> impl Responder {
+    HttpResponse::Ok().json(serde_json::json!({ "status": "healthy" }))
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let state = web::Data::new(AppState {
-        state: Mutex::new(ServiceState {
-            domain: "recovery".to_string(),
-            processed: 0,
-        }),
-    });
-
-    println!("Starting server on :8080");
+    let store = Arc::new(app::Store::new());
     HttpServer::new(move || {
         App::new()
-            .app_data(state.clone())
+            .app_data(web::Data::new(store.clone()))
+            .route("/api/v1/insert", web::post().to(insert))
             .route("/health", web::get().to(health))
-            .route("/process", web::post().to(process))
     })
     .bind(("0.0.0.0", 8080))?
     .run()
