@@ -1,44 +1,49 @@
-<!-- PORTFOLIO PROJECT PROFILE: maintained by the repository owner -->
+# Sky Recovery
 
-## Project profile and code-audit snapshot
+Sky Recovery is a small Rust CLI/library for creating and verifying backup manifests. It records the relative path, byte size, and SHA-256 digest of explicitly selected backup artifacts, then verifies those artifacts before a restore or recovery exercise.
 
-**What this is:** **Rust-Disaster-Recovery** is a public repository described as: “Enterprise-grade disaster recovery implementation in Rust. #SkyCoin4444 #AI #Blockchain #DevOps #Innovation” Its dominant language signals are **Rust (2 files)**.
+**Status: engineering beta.** This repository verifies backup-file integrity; it does not perform backups, restore databases, orchestrate failover, manage cloud snapshots, or prove a disaster-recovery plan will meet an RPO/RTO.
 
-**Why it has value:** Its value is best understood through the implementation evidence currently present in the repository: **16 tracked files** were observed in the shallow audit, with the source structure and existing documentation providing the project’s specific context. This README does not treat a prototype, experiment, or archive as a production system without supporting evidence.
+## Create a manifest
 
-**Implementation evidence:** No test-related file was detected by filename heuristics.; 2 dependency or package manifest(s) detected; 2 build/CI/infrastructure signal(s) detected; and 3 documentation or governance file(s) detected. Test filenames observed include none detected. Dependency or package files include `Cargo.toml`, `package.json`. Build, CI, or infrastructure signals include `Dockerfile`, `.github/workflows/ci.yml`.
+```bash
+sky-recovery create /srv/backups database.dump config.tar > recovery-manifest.json
+```
 
-**Current status:** The repository is tracked on the `main` branch. The existing source tree, configuration, tests, workflows, and documentation remain authoritative for supported behavior and maturity. A code audit is not a production-readiness certification, and the presence of a test or workflow file does not establish that all checks pass.
+Only explicit relative file paths are accepted. Absolute paths, `..` traversal, duplicate paths, directories, empty path lists, and manifests above 10,000 entries are rejected.
 
-**Relationship to the wider portfolio:** This repository is one focused component of the broader Skyler Blue Spillers portfolio across AI, software engineering, cloud and DevOps, cybersecurity, blockchain, finance, education, social systems, and creative work. It may provide a service boundary, implementation pattern, experiment, archive, or reusable idea for related repositories. Treat repositories as technical dependencies only where documented interfaces and verified project requirements support that relationship.
+## Verify a manifest
 
-**Quality and security note:** No obvious secret-like pattern was detected by the limited static scan; this is not a substitute for a security audit. No TODO/FIXME marker was detected in the scanned text files.
+```bash
+sky-recovery verify recovery-manifest.json /srv/backups
+```
 
----
+Verification checks manifest version, path safety, duplicate entries, regular-file type, exact byte size, and SHA-256 digest. The command exits `0` only when every listed artifact verifies; integrity failures exit `1`; invalid invocation/configuration exits `2`.
 
-# Rust Disaster Recovery
+## Local verification
 
-![GitHub stars](https://img.shields.io/github/stars/skylerblue333/Rust-Disaster-Recovery?style=flat-square)
-![GitHub license](https://img.shields.io/github/license/skylerblue333/Rust-Disaster-Recovery?style=flat-square)
+```bash
+cargo fmt --all -- --check
+cargo check --all-targets
+cargo clippy --all-targets -- -D warnings
+cargo test --all-targets
+cargo audit
+cargo build --release
+```
 
-## 🌟 Overview
-**Rust-Disaster-Recovery** is a professional-grade project within the **SkyCoin4444** ecosystem. It focuses on delivering high-value solutions in the domain of **Rust**.
+Container:
 
-## 🚀 Key Features
-- **Scalable Architecture**: Designed for enterprise-level growth and performance.
-- **Modern Standards**: Implements best practices for clean code and maintainability.
-- **Robust Integration**: Built to work seamlessly within modern cloud-native environments.
+```bash
+docker build -t sky-recovery .
+docker run --rm sky-recovery --help
+```
 
-## 🛠️ Technology Stack
-- **Primary Domain**: Rust
-- **Ecosystem**: SkyCoin4444 Digital Platform
+The image runs as numeric non-root UID `10001`. CI verifies formatting, compilation, Clippy, unit tests, dependency audit, release build, image build, non-root configuration, and CLI startup.
 
-## 📂 Structure
-The project is organized into a modular structure to ensure clarity and ease of development.
+## SKYCOIN4444 integration
 
-## 👨‍💻 Author
-**Skyler Blue Spillers**
-*Professional Chess Player & Software Engineer*
+Sky Recovery can be used by infrastructure/runbook automation as a pre-restore integrity check. A deployment should generate manifests alongside backup artifacts, store them in an independently protected location, and verify them before restore drills. Integration should invoke the CLI or library contract rather than copying implementation code.
 
----
-*Powered by SkyCoin4444*
+## Security and recovery limits
+
+A checksum proves byte integrity against the supplied manifest, not authenticity by itself. This beta does not sign manifests, encrypt backups, protect credentials, validate application-level consistency, test restore procedures, replicate data, manage retention, or measure RPO/RTO. Production disaster recovery requires independently protected/signed metadata, actual restore drills, infrastructure controls, observability, access control, and documented incident procedures.
