@@ -42,7 +42,10 @@ fn safe_relative_path(raw: &str) -> Result<PathBuf, String> {
     if raw.is_empty() || path.is_absolute() {
         return Err("path must be a non-empty relative path".to_string());
     }
-    if path.components().any(|component| !matches!(component, Component::Normal(_))) {
+    if path
+        .components()
+        .any(|component| !matches!(component, Component::Normal(_)))
+    {
         return Err("path must not contain traversal or platform prefix components".to_string());
     }
     Ok(path.to_path_buf())
@@ -81,8 +84,8 @@ pub fn build_manifest(root: &Path, paths: &[String]) -> Result<Manifest, String>
         if !metadata.is_file() {
             return Err(format!("{}: not a regular file", relative.display()));
         }
-        let digest = sha256_file(&full)
-            .map_err(|error| format!("{}: {error}", relative.display()))?;
+        let digest =
+            sha256_file(&full).map_err(|error| format!("{}: {error}", relative.display()))?;
         files.push(ManifestEntry {
             path: raw.clone(),
             bytes: metadata.len(),
@@ -147,7 +150,11 @@ pub fn verify_manifest(root: &Path, manifest: &Manifest) -> VerificationReport {
         if metadata.len() != entry.bytes {
             failures.push(VerificationFailure {
                 path: entry.path.clone(),
-                reason: format!("size mismatch: expected {}, got {}", entry.bytes, metadata.len()),
+                reason: format!(
+                    "size mismatch: expected {}, got {}",
+                    entry.bytes,
+                    metadata.len()
+                ),
             });
             continue;
         }
