@@ -127,7 +127,10 @@ mod tests {
         let mut input = plan();
         input.required_artifacts.reverse();
         let normalized = validate_backup_plan(&input).expect("valid plan");
-        assert_eq!(normalized.required_artifacts, vec!["database.dump", "manifest.json"]);
+        assert_eq!(
+            normalized.required_artifacts,
+            vec!["database.dump", "manifest.json"]
+        );
         assert!(!normalized.backup_performed);
     }
 
@@ -162,10 +165,14 @@ mod tests {
     fn rejects_unsafe_plan_inputs() {
         let mut input = plan();
         input.source_id = input.target_id.clone();
-        assert!(validate_backup_plan(&input).unwrap_err().contains("must differ"));
+        assert!(validate_backup_plan(&input)
+            .unwrap_err()
+            .contains("must differ"));
 
         let mut duplicate = plan();
         duplicate.required_artifacts = vec!["manifest.json".into(), "manifest.json".into()];
-        assert!(validate_backup_plan(&duplicate).unwrap_err().contains("duplicate"));
+        assert!(validate_backup_plan(&duplicate)
+            .unwrap_err()
+            .contains("duplicate"));
     }
 }
