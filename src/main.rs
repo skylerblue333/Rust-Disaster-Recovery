@@ -1,36 +1,51 @@
-use actix_web::{web, App, HttpResponse, HttpServer, Responder};
-use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use sky_recovery::{build_manifest, verify_manifest, Manifest};
+use std::env;
+use std::fs;
+use std::path::Path;
 
-#[derive(Deserialize)]
-struct InsertRequest {
-    key: String,
-    value: f64,
-    timestamp: u64,
+fn usage() {
+    println!(
+        "sky-recovery create <root> <relative-path>...\nsky-recovery verify <manifest.json> <root>"
+    );
 }
 
-async fn insert(
-    store: web::Data<Arc<app::Store>>,
-    req: web::Json<InsertRequest>,
-) -> impl Responder {
-    store.insert(&req.key, req.value, req.timestamp);
-    HttpResponse::Ok().json(serde_json::json!({ "status": "inserted", "total": store.count() }))
+fn run() -> Result<i32, String> {
+    let args: Vec<String> = env::args().collect();
+    if args.len() == 2 && matches!(args[1].as_str(), "--help" | "-h") {
+        usage();
+        return Ok(0);
+    }
+    match args.get(1).map(String::as_str) {
+        Some("create") if args.len() >= 4 => {
+            let root = Path::new(&args[2]);
+            let manifest = build_manifest(root, &args[3..])?;
+            let json =
+                serde_json::to_string_pretty(&manifest).map_err(|error| error.to_string())?;
+            println!("{json}");
+            Ok(0)
+        }
+        Some("verify") if args.len() == 4 => {
+            let raw = fs::read_to_string(&args[2]).map_err(|error| error.to_string())?;
+            let manifest: Manifest =
+                serde_json::from_str(&raw).map_err(|error| error.to_string())?;
+            let report = verify_manifest(Path::new(&args[3]), &manifest);
+            let json = serde_json::to_string_pretty(&report).map_err(|error| error.to_string())?;
+            println!("{json}");
+            Ok(if report.is_ok() { 0 } else { 1 })
+        }
+        _ => {
+            usage();
+            Ok(2)
+        }
+    }
 }
 
-async fn health() -> impl Responder {
-    HttpResponse::Ok().json(serde_json::json!({ "status": "healthy" }))
-}
-
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    let store = Arc::new(app::Store::new());
-    HttpServer::new(move || {
-        App::new()
-            .app_data(web::Data::new(store.clone()))
-            .route("/api/v1/insert", web::post().to(insert))
-            .route("/health", web::get().to(health))
-    })
-    .bind(("0.0.0.0", 8080))?
-    .run()
-    .await
+fn main() {
+    match run() {
+        Ok(code) => std::process::exit(code),
+        Err(error) => {
+            eprintln!("error: {error}");
+            std::process::exit(2);
+        }
+    }
 }

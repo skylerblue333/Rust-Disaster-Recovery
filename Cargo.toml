@@ -1,18 +1,19 @@
 [package]
-name = "app"
-version = "3.0.0"
+name = "sky-recovery"
+version = "0.1.0"
 edition = "2021"
+license = "MIT"
+description = "Bounded backup manifest creation and verification CLI"
 
 [[bin]]
-name = "app"
+name = "sky-recovery"
 path = "src/main.rs"
 
 [lib]
-name = "app"
+name = "sky_recovery"
 path = "src/lib.rs"
 
 [dependencies]
-actix-web = "4.4"
-tokio = { version = "1.32", features = ["full"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
