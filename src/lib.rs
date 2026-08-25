@@ -1,3 +1,5 @@
+pub mod control;
+
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashSet;
