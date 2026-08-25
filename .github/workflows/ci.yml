@@ -1,10 +1,41 @@
-name: CI
-on: [push, pull_request]
+name: recovery-ci
+
+on:
+  push:
+    branches:
+      - main
+      - "product/**"
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
 jobs:
-  test:
+  verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo check
-      - run: cargo test
+        with:
+          components: rustfmt, clippy
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Check
+        run: cargo check --all-targets
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+      - name: Tests
+        run: cargo test --all-targets
+      - name: Dependency audit
+        run: cargo install cargo-audit --locked && cargo audit
+      - name: Release build
+        run: cargo build --release
+      - name: Build container
+        run: docker build -t sky-recovery:ci .
+      - name: Verify non-root image
+        run: test "$(docker image inspect sky-recovery:ci --format '{{.Config.User}}')" = "10001"
+      - name: CLI smoke test
+        run: docker run --rm sky-recovery:ci --help
